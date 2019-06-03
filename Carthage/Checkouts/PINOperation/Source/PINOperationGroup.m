@@ -76,12 +76,13 @@
   [self lock];
     NSAssert(_canceled == NO, @"Operation group canceled.");
     if (_started == NO && _canceled == NO) {
+      dispatch_group_t group = _group;
       for (NSUInteger idx = 0; idx < _operations.count; idx++) {
-        dispatch_group_enter(_group);
+        dispatch_group_enter(group);
         dispatch_block_t originalOperation = _operations[idx];
         dispatch_block_t groupBlock = ^{
           originalOperation();
-          dispatch_group_leave(_group);
+          dispatch_group_leave(group);
         };
         
         id <PINOperationReference> operationReference = [_operationQueue scheduleOperation:groupBlock withPriority:[_operationPriorities[idx] unsignedIntegerValue]];
@@ -90,7 +91,7 @@
       
       if (_completion) {
         dispatch_queue_t completionQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        dispatch_group_notify(_group, completionQueue, ^{
+        dispatch_group_notify(group, completionQueue, ^{
           [self runCompletionIfNeeded];
         });
       }
